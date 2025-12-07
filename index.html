@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Snapshot Tracker</title>
+    <script type="text/javascript" nonce="f2cf6b1c2e454c41bc2d4568f59" src="//local.adguard.org?ts=1765092537533&amp;type=content-script&amp;dmn=server08.hostwhitelabel.com:2222&amp;url=https%3A%2F%2Fserver08.hostwhitelabel.com%3A2222%2Fapi%2Ffilemanager%2Fdownload%3Fpath%3D%2Fdomains%2Fmyfinsnap.com%2Fpublic_html%2Findex.html&amp;app=chrome.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script><link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="style.css?v=2.1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Analytics -->
+    
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-RJK0NEL54F');
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Mobile Sidebar Toggle -->
+        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+        <!-- Sidebar Backdrop -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <!-- Left Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>MYFINSNAP.COM</h2>
+                <div class="sidebar-actions">
+                    <button id="helpBtn" class="btn btn-secondary btn-sidebar" title="Welcome guide and help">
+                        <span class="btn-icon">❓</span>
+                        Need Help
+                    </button>
+                    <button id="createSnapshotBtn" class="btn btn-success btn-sidebar">
+                        <span class="btn-icon">+</span>
+                        New Snapshot
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Management Section -->
+            <div class="data-management-container">
+                <h3>Data Management</h3>
+
+                <div class="upload-section">
+                    <input type="file" id="uploadFile" accept=".json" class="file-input-hidden">
+                    <button id="uploadSnapshotBtn" class="btn btn-secondary btn-sidebar">
+                        <span class="btn-icon">📁</span>
+                        Upload Records
+                    </button>
+                </div>
+
+                <div class="data-actions">
+                    <button id="exportBtn" class="btn btn-primary btn-sidebar">
+                        <span class="btn-icon">💾</span>
+                        Export Records
+                    </button>
+                    <button id="clearDataBtn" class="btn btn-danger btn-sidebar">
+                        <span class="btn-icon">🗑️</span>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Snapshot List Section -->
+            <div class="snapshot-list-section">
+                <h3>All Snapshots</h3>
+
+                <!-- Search and Sort Controls -->
+                <div class="snapshot-controls">
+                    <div class="snapshot-search">
+                        <input type="text" id="snapshotSearch" class="snapshot-search-input" placeholder="Search snapshots...">
+                        <button id="clearSearchBtn" class="btn btn-secondary btn-small" style="display: none;">Clear</button>
+                    </div>
+
+                    <div class="snapshot-sort-controls">
+                        <button id="sortByDate" class="btn btn-secondary btn-small sort-btn active" data-sort="date">
+                            <span class="sort-icon">📅</span>
+                            Date
+                        </button>
+                        <button id="sortByName" class="btn btn-secondary btn-small sort-btn" data-sort="name">
+                            <span class="sort-icon">📝</span>
+                            Name
+                        </button>
+                        <button id="toggleSortDirection" class="btn btn-secondary btn-small" title="Toggle Sort Direction">
+                            ↓
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Snapshot List -->
+                <div class="snapshot-list" id="snapshotList">
+                    <!-- Snapshots will be populated here -->
+                </div>
+
+                <div class="snapshot-actions">
+                    <button id="renameSnapshotBtn" class="btn btn-secondary btn-small">
+                        <span class="btn-icon">✏️</span>
+                        Rename
+                    </button>
+                    <button id="duplicateSnapshotBtn" class="btn btn-secondary btn-small">Duplicate</button>
+                    <button id="deleteSnapshotBtn" class="btn btn-danger btn-small">Delete</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>Personal Finance Snapshot Tracker</h1>
+                <p class="subtitle">Adulting made (slightly) easier ~</p>
+            </header>
+
+            <!-- Snapshot Notification -->
+            <div id="snapshotNotification" class="notification notification-warning" style="display: none;">
+                <p>To begin tracking your finances, please create your first snapshot using the "New Snapshot" button in the sidebar.</p>
+            </div>
+
+            <!-- Summary Section -->
+            <section class="summary-section">
+                <div class="section-header">
+                    <h2>Financial Summary</h2>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <h3>Total Assets</h3>
+                        <p class="amount positive" id="totalAssets">$0.00</p>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Total Liabilities</h3>
+                        <p class="amount negative" id="totalLiabilities">$0.00</p>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Net Worth</h3>
+                        <p class="amount" id="netWorth">$0.00</p>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Monthly Income</h3>
+                        <p class="amount positive" id="totalIncome">$0.00</p>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Monthly Expenses</h3>
+                        <p class="amount negative" id="totalExpenses">$0.00</p>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Monthly Savings</h3>
+                        <p class="amount" id="savings">$0.00</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Entry Sections -->
+            <div class="data-sections">
+                <!-- Assets Section -->
+                <section class="assets-section">
+                    <div class="section-header">
+                        <h2>Total Assets 🏦</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary btn-small edit-mode-btn" data-category="assets" title="Toggle Edit Mode">
+                                <span class="btn-icon">✏️</span>
+                                Edit Mode: OFF
+                            </button>
+                        </div>
+                    </div>
+                    <form id="assetsForm" class="item-form">
+                        <div class="form-row">
+                            <input type="text" id="assetName" placeholder="Asset name" required>
+                            <input type="number" id="assetAmount" placeholder="Amount" step="0.01" min="0" required>
+                            <select id="assetCategory" class="form-select" required>
+                                <option value="">Select Category</option>
+                                <option value="cash">Cash Equivalents</option>
+                                <option value="investments">Investments</option>
+                                <option value="retirement">Retirement</option>
+                                <option value="property">Property</option>
+                                <option value="vehicles">Vehicles</option>
+                                <option value="insurance">Insurance (Cash Value)</option>
+                                <option value="other">Other Assets</option>
+                            </select>
+                            <select id="assetLiquidity" class="form-select" required>
+                                <option value="">Select Liquidity</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Add Asset</button>
+                        </div>
+                    </form>
+
+                    <!-- Asset Category Examples Section -->
+                    <div id="assetCategoryExamples" class="asset-examples">
+                        <h4>Category & Liquidity Guide</h4>
+                        <div id="categoryExamplesContent" class="examples-content">
+                            <p class="examples-placeholder">Select a category and liquidity to see examples and information</p>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="items-table" id="assetsTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="name">
+                                        <span>Asset</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="amount">
+                                        <span>Amount</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="category">
+                                        <span>Category</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="liquidity">
+                                        <span>Liquidity</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Assets will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Liabilities Section -->
+                <section class="liabilities-section">
+                    <div class="section-header">
+                        <h2>Total Liabilities 💳</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary btn-small edit-mode-btn" data-category="liabilities" title="Toggle Edit Mode">
+                                <span class="btn-icon">✏️</span>
+                                Edit Mode: OFF
+                            </button>
+                        </div>
+                    </div>
+                    <form id="liabilitiesForm" class="item-form">
+                        <div class="form-row">
+                            <input type="text" id="liabilityName" placeholder="Liability name" required>
+                            <input type="number" id="liabilityAmount" placeholder="Amount" step="0.01" min="0" required>
+                            <select id="liabilityTerm" class="form-select" required>
+                                <option value="">Select Term</option>
+                                <option value="short-term">Short-Term</option>
+                                <option value="medium-term">Medium-Term</option>
+                                <option value="long-term">Long-Term</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Add Liability</button>
+                        </div>
+                    </form>
+
+                    <!-- Liability Term Examples Section -->
+                    <div id="liabilityTermExamples" class="asset-examples">
+                        <h4>Liability Term Guide</h4>
+                        <div id="liabilityTermExamplesContent" class="examples-content">
+                            <p class="examples-placeholder">Select a term to see examples and descriptions</p>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="items-table" id="liabilitiesTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="name">
+                                        <span>Liability</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="amount">
+                                        <span>Amount</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="term">
+                                        <span>Term</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Liabilities will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Income Section -->
+                <section class="income-section">
+                    <div class="section-header">
+                        <h2>Monthly Income 💰</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary btn-small edit-mode-btn" data-category="incomes" title="Toggle Edit Mode">
+                                <span class="btn-icon">✏️</span>
+                                Edit Mode: OFF
+                            </button>
+                        </div>
+                    </div>
+                    <form id="incomeForm" class="item-form">
+                        <div class="form-row">
+                            <input type="text" id="incomeName" placeholder="Income source" required>
+                            <input type="number" id="incomeAmount" placeholder="Amount" step="0.01" min="0" required>
+                            <select id="incomeCategory" class="form-select" required>
+                                <option value="">Select Category</option>
+                                <option value="employment">Employment Income</option>
+                                <option value="business">Business / Self-Employment Income</option>
+                                <option value="passive">Passive Income</option>
+                                <option value="other">Other Income</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Add Income</button>
+                        </div>
+                    </form>
+
+                    <!-- Income Category Examples Section -->
+                    <div id="incomeCategoryExamples" class="asset-examples">
+                        <h4>Income Category Guide</h4>
+                        <div id="incomeCategoryExamplesContent" class="examples-content">
+                            <p class="examples-placeholder">Select a category to see examples</p>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="items-table" id="incomeTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="name">
+                                        <span>Income Source</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="amount">
+                                        <span>Amount</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="category">
+                                        <span>Category</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Income will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Expenses Section -->
+                <section class="expenses-section">
+                    <div class="section-header">
+                        <h2>Monthly Expenses 🛒</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary btn-small edit-mode-btn" data-category="expenses" title="Toggle Edit Mode">
+                                <span class="btn-icon">✏️</span>
+                                Edit Mode: OFF
+                            </button>
+                        </div>
+                    </div>
+                    <form id="expensesForm" class="item-form">
+                        <div class="form-row">
+                            <input type="text" id="expenseName" placeholder="Expense name" required>
+                            <input type="number" id="expenseAmount" placeholder="Amount" step="0.01" min="0" required>
+                            <select id="expenseCategory" class="form-select" required>
+                                <option value="">Select Category</option>
+                                <option value="essential">Essential / Fixed</option>
+                                <option value="variable">Variable / Living</option>
+                                <option value="discretionary">Discretionary / Lifestyle</option>
+                                <option value="other">Other Expenses</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Add Expense</button>
+                        </div>
+                    </form>
+
+                    <!-- Expense Category Examples Section -->
+                    <div id="expenseCategoryExamples" class="asset-examples">
+                        <h4>Expense Category Guide</h4>
+                        <div id="expenseCategoryExamplesContent" class="examples-content">
+                            <p class="examples-placeholder">Select a category to see examples</p>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="items-table" id="expensesTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="name">
+                                        <span>Expenses</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="amount">
+                                        <span>Amount</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                    <th class="sortable" data-column="category">
+                                        <span>Category</span>
+                                        <span class="filter-icon" title="Filter & Sort">🔍</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Expenses will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Financial Analysis Section -->
+            <section class="financial-analysis-section">
+                <div class="section-header">
+                    <h2>Financial Analysis & Insights 📊</h2>
+                </div>
+
+                <!-- Chart Containers -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Assets Breakdown</h3>
+                        <canvas id="assetsChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Liabilities Breakdown</h3>
+                        <canvas id="liabilitiesChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Income Breakdown</h3>
+                        <canvas id="incomeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Expenses Breakdown</h3>
+                        <canvas id="expensesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Financial Ratios Overview -->
+                <div class="ratios-overview">
+                    <h3>Financial Ratios</h3>
+
+                    <!-- First row: Basic Liquidity, Debt to Asset, Solvency -->
+                    <div class="ratios-row">
+                        <div class="ratio-item ratio-item-expandable ratio-item-liquidity">
+                            <div class="ratio-item-header">
+                                <div class="ratio-item-left">
+                                    <div class="ratio-icon">🛡️</div>
+                                    <div class="ratio-title-section">
+                                        <h4>Basic Liquidity Ratio</h4>
+                                        <span class="ratio-subtitle">Emergency Fund Coverage</span>
+                                    </div>
+                                </div>
+                                <button class="ratio-info-btn" title="Learn more about this ratio" data-ratio="basicLiquidity">
+                                    <span class="info-icon">ℹ️</span>
+                                    <span class="info-text">Info</span>
+                                </button>
+                            </div>
+                            <div class="ratio-main-display">
+                                <div class="ratio-value-container">
+                                    <p class="ratio-value" id="basicLiquidityRatio">0.0</p>
+                                </div>
+                            </div>
+
+                            <div class="ratio-details" id="basicLiquidityDetails" style="display: none;">
+                                <div class="ratio-details-header">
+                                    <h5>🛡️ Understanding Basic Liquidity Ratio</h5>
+                                </div>
+                                <div class="ratio-details-content">
+                                    <div class="ratio-explanation">
+                                        <p><strong>What it measures:</strong> How many months of living expenses your emergency fund can cover. This is your financial safety net for unexpected events.</p>
+                                    </div>
+
+                                    <div class="ratio-interpretation">
+                                        <h6>📊 How to Interpret Your Score:</h6>
+                                        <div class="interpretation-grid">
+                                            <div class="interpretation-item critical">
+                                                <span class="range">< 3 months</span>
+                                                <span class="description">Insufficient coverage - vulnerable to financial shocks</span>
+                                            </div>
+                                            <div class="interpretation-item positive">
+                                                <span class="range">3-6 months</span>
+                                                <span class="description">Adequate coverage - you're well prepared!</span>
+                                            </div>
+                                            <div class="interpretation-item warning">
+                                                <span class="range">>6 months</span>
+                                                <span class="description">Cash heavy - consider investing excess emergency funds</span>
+                                            </div>
+                                            <div class="interpretation-item business">
+                                                <span class="range">Self-employed</span>
+                                                <span class="description">6-12 months recommended due to variable income</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-calculation">
+                                        <h6>🔢 What's Included:</h6>
+                                        <div class="calculation-breakdown">
+                                            <div class="calc-item">
+                                                <strong>Numerator:</strong> Cash Equivalents (savings, checking accounts, money market funds)
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Denominator:</strong> Total Monthly Expenses (rent, groceries, utilities, insurance, etc.)
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Formula:</strong> Cash Equivalents ÷ Total Monthly Expenses
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-tips">
+                                        <h6>💡 Improving Basic Liquidity Ratio:</h6>
+                                        <ul class="tips-list">
+                                            <li>Hold more cash or cash equivalents</li>
+                                            <li>Reduce your monthly expenses</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ratio-item ratio-item-expandable ratio-item-debt">
+                            <div class="ratio-item-header">
+                                <div class="ratio-item-left">
+                                    <div class="ratio-icon">🏦</div>
+                                    <div class="ratio-title-section">
+                                        <h4>Debt to Asset Ratio</h4>
+                                        <span class="ratio-subtitle">Financial Leverage Level</span>
+                                    </div>
+                                </div>
+                                <button class="ratio-info-btn" title="Learn more about this ratio" data-ratio="debtToAsset">
+                                    <span class="info-icon">ℹ️</span>
+                                    <span class="info-text">Info</span>
+                                </button>
+                            </div>
+                            <div class="ratio-main-display">
+                                <div class="ratio-value-container">
+                                    <p class="ratio-value" id="debtToAssetRatio">0.0</p>
+                                </div>
+                            </div>
+
+                            <div class="ratio-details" id="debtToAssetDetails" style="display: none;">
+                                <div class="ratio-details-header">
+                                    <h5>🏦 Understanding Debt to Asset Ratio</h5>
+                                </div>
+                                <div class="ratio-details-content">
+                                    <div class="ratio-explanation">
+                                        <p><strong>What it measures:</strong> The portion of your assets that you owe money on. Lower is safer because you own more than you owe.</p>
+                                    </div>
+
+                                    <div class="ratio-interpretation">
+                                        <h6>📊 How to Interpret Your Score:</h6>
+                                        <div class="interpretation-grid">
+                                            <div class="interpretation-item positive">
+                                                <span class="range">< 20%</span>
+                                                <span class="description">You owe little compared to what you own — financially stable.</span>
+                                            </div>
+                                            <div class="interpretation-item warning">
+                                                <span class="range">20%–50%</span>
+                                                <span class="description">You have moderate debt; manageable but watch it.</span>
+                                            </div>
+                                            <div class="interpretation-item critical">
+                                                <span class="range">>50%</span>
+                                                <span class="description">You owe more than half your assets—risky and could lead to problems.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-calculation">
+                                        <h6>🔢 What's Included:</h6>
+                                        <div class="calculation-breakdown">
+                                            <div class="calc-item">
+                                                <strong>Numerator:</strong> Total Liabilities
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Denominator:</strong> Total Assets
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Formula:</strong> (Total Debt ÷ Total Assets) × 100%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-tips">
+                                        <h6>💡 Improving Debt to Asset Ratio:</h6>
+                                        <ul class="tips-list">
+                                            <li>Pay down high-interest debts faster</li>
+                                            <li>Increase your savings and investments</li>
+                                            <li>Balance borrowing with your ability to repay</li>
+                                            <li>Avoid taking on too much debt relative to your asset base</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ratio-item ratio-item-expandable ratio-item-solvency">
+                            <div class="ratio-item-header">
+                                <div class="ratio-item-left">
+                                    <div class="ratio-icon">🏛️</div>
+                                    <div class="ratio-title-section">
+                                        <h4>Solvency Ratio</h4>
+                                        <span class="ratio-subtitle">Financial Stability Measure</span>
+                                    </div>
+                                </div>
+                                <button class="ratio-info-btn" title="Learn more about this ratio" data-ratio="solvency">
+                                    <span class="info-icon">ℹ️</span>
+                                    <span class="info-text">Info</span>
+                                </button>
+                            </div>
+                            <div class="ratio-main-display">
+                                <div class="ratio-value-container">
+                                    <p class="ratio-value" id="solvencyRatio">0.0</p>
+                                </div>
+                            </div>
+
+                            <div class="ratio-details" id="solvencyDetails" style="display: none;">
+                                <div class="ratio-details-header">
+                                    <h5>🏛️ Understanding Solvency Ratio</h5>
+                                </div>
+                                <div class="ratio-details-content">
+                                    <div class="ratio-explanation">
+                                        <p><strong>What it measures:</strong> The proportion of your assets that you truly own (after paying off all debts). A measure of your long-term financial stability and ability to meet long-term obligations.</p>
+                                    </div>
+
+                                    <div class="ratio-interpretation">
+                                        <h6>📊 How to Interpret Your Score:</h6>
+                                        <div class="interpretation-grid">
+                                            <div class="interpretation-item critical">
+                                                <span class="range">< 10%</span>
+                                                <span class="description">You owe significantly more than you own - financial stability is at risk</span>
+                                            </div>
+                                            <div class="interpretation-item warning">
+                                                <span class="range">10%–20%</span>
+                                                <span class="description">You have some equity but debts may pose long-term challenges</span>
+                                            </div>
+                                            <div class="interpretation-item positive">
+                                                <span class="range">>20%</span>
+                                                <span class="description">You own the majority of your assets and have strong financial foundations</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-calculation">
+                                        <h6>🔢 What's Included:</h6>
+                                        <div class="calculation-breakdown">
+                                            <div class="calc-item">
+                                                <strong>Numerator:</strong> Net Worth (Total Assets - Total Liabilities)
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Denominator:</strong> Total Assets
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Formula:</strong> (Net Worth ÷ Total Assets) × 100%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-tips">
+                                        <h6>💡 Improving Solvency Ratio:</h6>
+                                        <ul class="tips-list">
+                                            <li>Pay down outstanding debts to reduce liabilities</li>
+                                            <li>Increase savings and asset accumulation</li>
+                                            <li>Focus on building equity in long-term investments</li>
+                                            <li>Avoid taking on excessive debt relative to your assets</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Second row: Savings, Liquid Assets to Net Worth -->
+                    <div class="ratios-row">
+                        <div class="ratio-item ratio-item-expandable ratio-item-savings">
+                            <div class="ratio-item-header">
+                                <div class="ratio-item-left">
+                                    <div class="ratio-icon">💰</div>
+                                    <div class="ratio-title-section">
+                                        <h4>Savings Ratio</h4>
+                                        <span class="ratio-subtitle">Monthly Savings Percentage</span>
+                                    </div>
+                                </div>
+                                <button class="ratio-info-btn" title="Learn more about this ratio" data-ratio="savings">
+                                    <span class="info-icon">ℹ️</span>
+                                    <span class="info-text">Info</span>
+                                </button>
+                            </div>
+                            <div class="ratio-main-display">
+                                <div class="ratio-value-container">
+                                    <p class="ratio-value" id="savingsRatio">0.0</p>
+                                </div>
+                            </div>
+
+                            <div class="ratio-details" id="savingsDetails" style="display: none;">
+                                <div class="ratio-details-header">
+                                    <h5>💰 Understanding Savings Ratio</h5>
+                                </div>
+                                <div class="ratio-details-content">
+                                    <div class="ratio-explanation">
+                                        <p><strong>What it measures:</strong> How much of your income you save each month. Saving more helps you build wealth and prepare for the future.</p>
+                                    </div>
+
+                                    <div class="ratio-interpretation">
+                                        <h6>📊 How to Interpret Your Score:</h6>
+                                        <div class="interpretation-grid">
+                                            <div class="interpretation-item critical">
+                                                <span class="range">< 10%</span>
+                                                <span class="description">Not saving enough to stay financially secure long-term</span>
+                                            </div>
+                                            <div class="interpretation-item warning">
+                                                <span class="range">10%–20%</span>
+                                                <span class="description">Saving okay, but there's room for improvement</span>
+                                            </div>
+                                            <div class="interpretation-item positive">
+                                                <span class="range">20%+</span>
+                                                <span class="description">Saving well and building a strong financial cushion</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-calculation">
+                                        <h6>🔢 What's Included:</h6>
+                                        <div class="calculation-breakdown">
+                                            <div class="calc-item">
+                                                <strong>Numerator:</strong> Monthly Savings
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Denominator:</strong> Total Monthly Income
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Formula:</strong> (Monthly Savings ÷ Monthly Income) × 100%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-tips">
+                                        <h6>💡 Improving Savings Ratio:</h6>
+                                        <ul class="tips-list">
+                                            <li>Increase your income through side gigs or raises</li>
+                                            <li>Reduce discretionary expenses and unnecessary spending</li>
+                                            <li>Set up automatic transfers to savings accounts</li>
+                                            <li>Create a budget to track and control spending</li>
+                                            <li>Focus on high-return savings and investment options</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ratio-item ratio-item-expandable ratio-item-liquidity-wealth">
+                            <div class="ratio-item-header">
+                                <div class="ratio-item-left">
+                                    <div class="ratio-icon">💸</div>
+                                    <div class="ratio-title-section">
+                                        <h4>Liquid Assets to Net Worth Ratio</h4>
+                                        <span class="ratio-subtitle">Emergency Preparedness</span>
+                                    </div>
+                                </div>
+                                <button class="ratio-info-btn" title="Learn more about this ratio" data-ratio="liquidity-wealth">
+                                    <span class="info-icon">ℹ️</span>
+                                    <span class="info-text">Info</span>
+                                </button>
+                            </div>
+                            <div class="ratio-main-display">
+                                <div class="ratio-value-container">
+                                    <p class="ratio-value" id="liquidityToNetWorthRatio">0.0</p>
+                                </div>
+                            </div>
+
+                            <div class="ratio-details" id="liquidityWealthDetails" style="display: none;">
+                                <div class="ratio-details-header">
+                                    <h5>💸 Understanding Liquid Assets to Net Worth Ratio</h5>
+                                </div>
+                                <div class="ratio-details-content">
+                                    <div class="ratio-explanation">
+                                        <p><strong>What it measures:</strong> How much of your total wealth is in cash or things you can quickly access. This helps you handle emergencies without stress.</p>
+                                    </div>
+
+                                    <div class="ratio-interpretation">
+                                        <h6>📊 How to Interpret Your Score:</h6>
+                                        <div class="interpretation-grid">
+                                            <div class="interpretation-item critical">
+                                                <span class="range">< 10%</span>
+                                                <span class="description">You have little accessible money, which is risky if urgent expenses come up</span>
+                                            </div>
+                                            <div class="interpretation-item warning">
+                                                <span class="range">10%–20%</span>
+                                                <span class="description">You have some liquidity but might struggle with unexpected costs</span>
+                                            </div>
+                                            <div class="interpretation-item positive">
+                                                <span class="range">20%+</span>
+                                                <span class="description">You have plenty of cash or assets ready for emergencies</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-calculation">
+                                        <h6>🔢 What's Included:</h6>
+                                        <div class="calculation-breakdown">
+                                            <div class="calc-item">
+                                                <strong>Numerator:</strong> Liquid Assets (Assets with "High" Liquidity)
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Denominator:</strong> Net Worth
+                                            </div>
+                                            <div class="calc-item">
+                                                <strong>Formula:</strong> (Liquid Assets ÷ Net Worth) × 100%
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="ratio-tips">
+                                        <h6>💡 Improving Liquid Assets to Net Worth Ratio:</h6>
+                                        <ul class="tips-list">
+                                            <li>Add more cash equivalents like savings accounts or money market funds</li>
+                                            <li>Reduce high-interest debt to improve your net worth base</li>
+                                            <li>Balance between growing net worth and maintaining emergency funds</li>
+                                            <li>Consider liquidity when making investment decisions</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p>&copy; 2025 My Finance Snapshot. All data stored locally in your browser.</p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <!-- Home Page Modal -->
+    <div id="homeModal" class="home-modal">
+        <div class="home-modal-content">
+            <button id="closeHelpModal" class="modal-close-btn" title="Close help">✕</button>
+            <div class="home-header">
+                <h1>Welcome to My Finance Snapshot</h1>
+                <p class="home-subtitle">Your Personal Finance Snapshot Tracker</p>
+            </div>
+
+            <div class="home-content">
+                <div class="hero-section">
+                    <div class="hero-text">
+                        <div class="disclaimer-section" style="border: 2px solid #ffcc02; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fff9e6; text-align: center;">
+                            <p style="color: #856404; font-size: 0.8rem; line-height: 1.5; margin: 0; font-weight: 500;">
+                                <strong>⚠️ Disclaimer:</strong> This website is for educational purposes only and should not be considered financial, investment, legal, or tax advice. You are responsible for evaluating your own financial decisions and should consult qualified professionals. Your use of this website is at your own risk. We are not liable for any losses or damages. By using this website, you agree to these terms.
+                            </p>
+                        </div>
+
+                        <h2>Take Control of Your Finances</h2>
+                        <p>Track your assets, liabilities, income, and expenses across multiple snapshots to monitor your financial health over time.</p>
+                        <div class="features-highlight">
+                            <div class="feature">
+                                <span class="feature-icon">📊</span>
+                                <div class="feature-text">
+                                    <h4>Visual Charts</h4>
+                                    <p>See your financial breakdown with beautiful pie charts</p>
+                                </div>
+                            </div>
+                            <div class="feature">
+                                <span class="feature-icon">📈</span>
+                                <div class="feature-text">
+                                    <h4>Financial Ratios</h4>
+                                    <p>Monitor key metrics like debt-to-asset ratio and savings rate</p>
+                                </div>
+                            </div>
+                            <div class="feature">
+                                <span class="feature-icon">💾</span>
+                                <div class="feature-text">
+                                    <h4>Data Management</h4>
+                                    <p>Import/export your financial data, create multiple snapshots</p>
+                                </div>
+                            </div>
+                            <div class="feature">
+                                <span class="feature-icon">🛡️</span>
+                                <div class="feature-text">
+                                    <h4>Complete Privacy</h4>
+                                    <p>Data is not stored on our website, export your data before leaving</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="how-to-use">
+                    <h3>How to Use Finance Tracker</h3>
+                    <div class="steps">
+                        <div class="step">
+                            <span class="step-number">1</span>
+                            <div class="step-content">
+                                <h4>Create Your First Snapshot</h4>
+                                <p>Click "New Snapshot" in the sidebar to create a record of your current financial position.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <span class="step-number">2</span>
+                            <div class="step-content">
+                                <h4>Add Your Financial Data</h4>
+                                <p>Enter your assets, liabilities, income sources, and expenses using the forms provided.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <span class="step-number">3</span>
+                            <div class="step-content">
+                                <h4>Analyze & Monitor</h4>
+                                <p>Review your financial ratios and charts to understand your financial health and trends.</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <span class="step-number">4</span>
+                            <div class="step-content">
+                                <h4>Track Over Time</h4>
+                                <p>Create regular snapshots to track how your finances change month-over-month or year-over-year.</p>
+                            </div>
+                        </div>
+                         <div class="step">
+                            <span class="step-number">5</span>
+                            <div class="step-content">
+                                <h4>Export & Import</h4>
+                                <p>Export your Data and Import them back again during your next use. Remember to clear all data before leaving!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="key-features">
+                    <h3>Key Features</h3>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <h4>📊 Asset Classification</h4>
+                            <p>Categorize assets by type (Cash, Investments, Property, etc.) and liquidity level (High, Medium, Low).</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>🏦 Liability Management</h4>
+                            <p>Track short-term, medium-term, and long-term liabilities with guided examples.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>💰 Income Tracking</h4>
+                            <p>Monitor employment income, business income, passive income, and other revenue streams.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>🛒 Expense Analysis</h4>
+                            <p>Break down essential, variable, and discretionary expenses for better budgeting.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>🎨 Interactive Tables</h4>
+                            <p>Sort, filter, and edit your data directly in the tables with advanced search capabilities.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h4>🔒 Privacy First</h4>
+                            <p>All data is stored locally in your browser - complete privacy and security.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tips-section">
+                    <h3>💡 Quick Tips</h3>
+                    <ul class="tips-list">
+                        <li><strong>User Experience:</strong> For the best experience, please use a larger screen like a laptop instead of a mobile device — our interface is optimized for bigger displays!</li>
+                        <li><strong>Regular Snapshots:</strong> Create a snapshot at the end of each month to track progress</li>
+                        <li><strong>Data Backup:</strong> Export your data regularly to avoid losing your financial history</li>
+                        <li><strong>Privacy:</strong> Clear all your records once you are done - Do it after you have exported your data. We do not store any of your data on our website.</li>
+                    </ul>
+                    <p style="color: #6c757d; font-style: italic; margin-top: 1.5rem; text-align: center; line-height: 1.6; font-size: 1rem;">
+                        ✨ Found a bug or have an idea to make things better? I would love to hear from you! Drop me an email at hello@myfinsnap.com
+                    </p>
+                </div>
+                <div class="tips-section" style="border-top: 2px solid #e9ecef; margin-top: 2rem; padding-top: 1.5rem; text-align: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px;">
+                    <p style="color: #6c757d; font-style: italic; margin: 0; padding: 1rem; line-height: 1.6; font-size: 0.95rem;">
+                        Made by someone who just wants to help you adult better. If this helps you save a little more, stress a little less, or smile along the way — then it is all worth it.
+                    </p>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
