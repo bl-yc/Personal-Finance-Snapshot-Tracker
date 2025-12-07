@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personal Finance Snapshot Tracker</title>
-    <script type="text/javascript" nonce="f2cf6b1c2e454c41bc2d4568f59" src="//local.adguard.org?ts=1765092537533&amp;type=content-script&amp;dmn=server08.hostwhitelabel.com:2222&amp;url=https%3A%2F%2Fserver08.hostwhitelabel.com%3A2222%2Fapi%2Ffilemanager%2Fdownload%3Fpath%3D%2Fdomains%2Fmyfinsnap.com%2Fpublic_html%2Findex.html&amp;app=chrome.exe&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script><link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="description" content="Track assets, liabilities, income and expenses with charts and ratios. Your data stays private in your browser.">
+    <meta name="robots" content="index,follow">
+    <meta name="theme-color" content="#667eea">
+    <link rel="canonical" href="https://myfinsnap.com/">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css?v=2.1">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <!-- Google Analytics -->
-    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RJK0NEL54F"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -22,7 +26,7 @@
 <body>
     <div class="app-container">
         <!-- Mobile Sidebar Toggle -->
-        <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
 
         <!-- Sidebar Backdrop -->
         <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -114,7 +118,8 @@
             <!-- Header -->
             <header class="header">
                 <h1>Personal Finance Snapshot Tracker</h1>
-                <p class="subtitle">Adulting made (slightly) easier ~</p>
+                <p class="subtitle">⚠️All data is stored locally on your browser⚠️</p>
+                <p class="subtitle">No personal information is shared with us. Please remember to use the Clear All button after use.</p>
             </header>
 
             <!-- Snapshot Notification -->
@@ -829,7 +834,88 @@
     </div>
 
     <!-- Success/Error Messages -->
-    <div id="messageContainer" class="message-container"></div>
+    <div id="messageContainer" class="message-container" aria-live="polite"></div>
+
+    <!-- AI Chatbot -->
+    <div id="chatbotContainer" class="chatbot-container">
+        <button id="chatbotToggle" class="chatbot-toggle" title="Open AI Assistant">
+            <span class="chatbot-icon">🤖</span>
+        </button>
+        <div id="chatbotWindow" class="chatbot-window">
+            <div class="chatbot-header">
+                <div class="chatbot-header-info">
+                    <span class="chatbot-icon-small">🤖</span>
+                    <div>
+                        <h3>AI Finance Assistant</h3>
+                        <p class="chatbot-subtitle" id="chatbotSnapshotInfo">Loading snapshot data...</p>
+                    </div>
+                </div>
+                <div class="chatbot-header-actions">
+                    <button id="chatbotClear" class="chatbot-clear-btn" title="Clear Chat">🗑️</button>
+                    <button id="chatbotSettings" class="chatbot-settings-btn" title="Settings">⚙️</button>
+                    <button id="chatbotClose" class="chatbot-close" title="Close">✕</button>
+                </div>
+            </div>
+            <div id="chatbotMessages" class="chatbot-messages">
+                <div class="chatbot-message chatbot-message-assistant">
+                    <div class="message-content">
+                        <p>Hello! I'm your AI Finance Assistant. I can help answer questions about your current financial snapshot, including:</p>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li>Your assets, liabilities, income, and expenses</li>
+                            <li>Financial ratios and what they mean</li>
+                            <li>Suggestions for improvement</li>
+                            <li>Analysis of your financial health</li>
+                        </ul>
+                        <p style="margin-top: 0.5rem;">What would you like to know about your finances?</p>
+                    </div>
+                </div>
+            </div>
+            <div class="chatbot-input-container">
+                <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Ask me anything about your finances..." />
+                <button id="chatbotSend" class="chatbot-send" title="Send message">➤</button>
+            </div>
+            <div id="chatbotLoading" class="chatbot-loading" style="display: none;">
+                <span>AI is thinking...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Settings Modal -->
+    <div id="chatbotSettingsModal" class="chatbot-settings-modal">
+        <div class="chatbot-settings-content">
+            <div class="chatbot-settings-header">
+                <h3>AI Assistant Settings</h3>
+                <button id="chatbotSettingsClose" class="chatbot-settings-close" title="Close">✕</button>
+            </div>
+            <div class="chatbot-settings-body">
+                <div class="settings-section">
+                    <label for="apiKeyInput">OpenAI Compatible API Key</label>
+                    <p class="settings-help">Enter your API key for OpenAI-compatible services (like OpenAI, DeepSeek, or any compatible API).</p>
+                    <input type="password" id="apiKeyInput" class="settings-input" placeholder="sk-..." />
+                </div>
+                <div class="settings-section">
+                    <label for="baseUrlInput">Base URL</label>
+                    <p class="settings-help">Enter the base URL for your OpenAI-compatible API endpoint (e.g., https://api.openai.com/v1).</p>
+                    <input type="text" id="baseUrlInput" class="settings-input" placeholder="https://api.openai.com/v1" />
+                </div>
+                <div class="settings-section">
+                    <label for="modelIdInput">Model ID</label>
+                    <p class="settings-help">Enter the model ID to use (e.g., gpt-4o-mini, deepseek-chat, etc.).</p>
+                    <input type="text" id="modelIdInput" class="settings-input" placeholder="gpt-4o-mini" />
+                </div>
+                <div class="settings-status" id="apiKeyStatus">
+                    <span id="apiKeyStatusText">Not configured</span>
+                </div>
+                <div class="settings-actions">
+                    <button id="saveApiKeyBtn" class="btn btn-primary">Save Settings</button>
+                    <button id="clearApiKeyBtn" class="btn btn-secondary">Clear</button>
+                </div>
+                <div class="settings-info">
+                    <p><strong>Privacy Note:</strong> Your API key is stored locally in your browser and never sent to our servers. Only the selected AI provider receives your key when processing questions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Home Page Modal -->
     <div id="homeModal" class="home-modal">
@@ -978,5 +1064,5 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=2.1"></script>
 </body>

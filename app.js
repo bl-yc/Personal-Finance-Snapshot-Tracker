@@ -95,13 +95,12 @@ class FinanceTracker {
     }
 
     init() {
-        console.log('FinanceTracker initializing...');
         this.loadData();
         this.checkShowWelcomeScreen();
         this.bindEventListeners();
         this.ensureAtLeastOneSnapshot(); // Only call if there are snapshots already
         this.updateUI();
-        console.log('FinanceTracker initialized successfully');
+        this.initChatbot(); // Initialize AI chatbot
     }
 
     // Data Management
@@ -122,7 +121,6 @@ class FinanceTracker {
     }
 
     clearData() {
-        console.log('Clearing all data...');
         this.data = { snapshots: [] };
         this.currentSnapshotId = null;
         this.searchTerm = '';
@@ -139,37 +137,51 @@ class FinanceTracker {
     }
 
     clearAllData() {
-        console.log('clearAllData called!');
-        
         // Enhanced clear all with detailed confirmation
         const snapshotCount = this.data.snapshots.length;
         const hasData = snapshotCount > 0;
-        
+        const hasApiKey = localStorage.getItem('ai_api_key') !== null;
+
         let confirmMessage = '🗑️ CLEAR ALL DATA - FRESH START\n\n';
-        confirmMessage += 'This will permanently delete ALL your financial data:\n\n';
-        
+        confirmMessage += 'This will permanently delete ALL your data:\n\n';
+
         if (hasData) {
             confirmMessage += `• ${snapshotCount} snapshot(s) will be removed\n`;
             confirmMessage += '• All assets, liabilities, income, and expenses will be deleted\n';
-            confirmMessage += '• The site will reset to a completely fresh state\n';
         } else {
-            confirmMessage += '• No existing data to delete\n';
-            confirmMessage += '• Site is already in a clean state\n';
+            confirmMessage += '• No existing financial data to delete\n';
         }
-        
+
+        confirmMessage += '• AI Chatbot history will be cleared\n';
+        if (hasApiKey) {
+            confirmMessage += '• AI Assistant API key will be cleared\n';
+        }
+
         confirmMessage += '\nAfter clearing, you can:\n';
         confirmMessage += '• Create new snapshots\n';
         confirmMessage += '• Add fresh financial data\n';
-        confirmMessage += '• Start your financial tracking journey over\n\n';
+        confirmMessage += '• Reconfigure AI assistance if needed\n';
+        confirmMessage += '• Start completely fresh\n\n';
         confirmMessage += '⚠️ This action cannot be undone!\n\n';
         confirmMessage += 'Do you want to proceed and get a fresh start?';
-        
-        console.log('Showing confirmation dialog...');
+
         if (confirm(confirmMessage)) {
-            console.log('User confirmed, clearing data...');
             this.clearData();
-        } else {
-            console.log('User cancelled clear all operation');
+
+            // Clear chatbot data and API key without additional confirmations
+            this.clearChat();
+            localStorage.removeItem('ai_api_key');
+            localStorage.removeItem('ai_base_url');
+            localStorage.removeItem('ai_model_id');
+            this.loadApiKeyStatus();
+
+            // Close settings modal if open
+            const settingsModal = document.getElementById('chatbotSettingsModal');
+            if (settingsModal && settingsModal.classList.contains('active')) {
+                this.closeChatbotSettings();
+            }
+
+            this.showMessage('🗑️ Everything cleared! Fresh start complete.', 'success');
         }
     }
 
@@ -686,6 +698,7 @@ class FinanceTracker {
     switchSnapshot(snapshotId) {
         this.currentSnapshotId = snapshotId;
         this.updateUI();
+        this.updateChatbotSnapshotInfo(); // Update chatbot context when snapshot changes
     }
 
     getCurrentSnapshot() {
@@ -892,6 +905,17 @@ class FinanceTracker {
                         throw new Error('Invalid data categories');
                     }
                 }
+
+                // Sanitize amounts to numbers to prevent string concatenation bugs
+                importedData.snapshots.forEach(snap => {
+                    ['assets','liabilities','incomes','expenses'].forEach(cat => {
+                        snap.data[cat] = (snap.data[cat] || []).map(item => {
+                            const sanitized = { ...item };
+                            sanitized.amount = this.validateNumber(item.amount);
+                            return sanitized;
+                        });
+                    });
+                });
 
                 this.data = importedData;
                 this.currentSnapshotId = this.data.snapshots[0]?.id || null;
@@ -1386,7 +1410,14 @@ class FinanceTracker {
     }
 
     updateTable(category, tableId) {
-        const table = document.getElementById(tableId).querySelector('tbody');
+        const tableEl = document.getElementById(tableId);
+        if (!tableEl) {
+            return;
+        }
+        const table = tableEl.querySelector('tbody');
+        if (!table) {
+            return;
+        }
         table.innerHTML = '';
 
         const snapshot = this.getCurrentSnapshot();
@@ -1650,7 +1681,14 @@ class FinanceTracker {
     updateEmptyTables() {
         const tables = ['assetsTable', 'liabilitiesTable', 'incomeTable', 'expensesTable'];
         tables.forEach(tableId => {
-            const table = document.getElementById(tableId).querySelector('tbody');
+            const tableEl = document.getElementById(tableId);
+            if (!tableEl) {
+                return;
+            }
+            const table = tableEl.querySelector('tbody');
+            if (!table) {
+                return;
+            }
             table.innerHTML = '';
         });
     }
@@ -2026,8 +2064,6 @@ class FinanceTracker {
 
     // Event Handlers
     bindEventListeners() {
-        console.log('Binding event listeners...');
-
         // Help button - show welcome guide
         document.getElementById('helpBtn').addEventListener('click', () => this.showHelpModal());
 
@@ -2069,8 +2105,8 @@ class FinanceTracker {
         // Forms
         document.getElementById('assetsForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            this.addItem('assets', 
-                document.getElementById('assetName').value, 
+            this.addItem('assets',
+                document.getElementById('assetName').value,
                 document.getElementById('assetAmount').value,
                 document.getElementById('assetCategory').value,
                 document.getElementById('assetLiquidity').value
@@ -2142,27 +2178,19 @@ class FinanceTracker {
         });
 
         // Clear All with enhanced confirmation
-        console.log('Binding clearDataBtn event listener...');
         const clearDataBtn = document.getElementById('clearDataBtn');
         if (clearDataBtn) {
-            console.log('clearDataBtn found, adding event listener');
             clearDataBtn.addEventListener('click', () => {
-                console.log('Clear Data button clicked!');
                 this.clearAllData();
             });
-        } else {
-            console.error('clearDataBtn element not found!');
         }
 
         // Export Records button
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {
             exportBtn.addEventListener('click', () => {
-                console.log('Export button clicked!');
                 this.exportData();
             });
-        } else {
-            console.error('exportBtn element not found!');
         }
 
         // Upload functionality
@@ -2212,14 +2240,10 @@ class FinanceTracker {
 
         // Bind ratio info toggle functionality
         this.bindRatioInfoToggles();
-
-        console.log('Event listeners bound successfully');
     }
 
     // Bind inline editing event listeners for edit mode
     bindEditModeEventListeners() {
-        console.log('Binding edit mode event listeners...');
-
         // Use event delegation for edit mode inputs to save changes automatically
         document.addEventListener('input', (e) => {
             if (e.target.classList.contains('edit-mode-input')) {
@@ -2495,8 +2519,6 @@ class FinanceTracker {
 
     // Section action handlers for edit mode toggle
     bindSectionActionListeners() {
-        console.log('Binding section action listeners...');
-
         // Edit mode toggle buttons
         document.querySelectorAll('.edit-mode-btn').forEach(button => {
             const category = button.dataset.category;
@@ -2785,6 +2807,11 @@ class FinanceTracker {
         const total = data.reduce((sum, value) => sum + value, 0);
 
         try {
+            const toOpaque = (hex) => {
+                if (typeof hex !== 'string') return hex;
+                return hex.length === 9 ? hex.slice(0, 7) + 'ff' : hex;
+            };
+
             this.charts[canvasId] = new Chart(ctx, {
                 type: 'pie',
                 data: {
@@ -2792,12 +2819,12 @@ class FinanceTracker {
                     datasets: [{
                         data: data,
                         backgroundColor: colors,
-                        borderColor: colors.map(color => color.replace('0.8', '1')),
+                        borderColor: colors.map(toOpaque),
                         borderWidth: 2,
                     }]
                 },
                 options: {
-                    responsive: false,
+                    responsive: true,
                     plugins: {
                         legend: {
                             position: 'bottom',
@@ -2883,7 +2910,7 @@ class FinanceTracker {
                 }]
             },
             options: {
-                responsive: false,
+                responsive: true,
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -2992,7 +3019,6 @@ class FinanceTracker {
 
     // Financial Ratios Calculations
     calculateFinancialRatios() {
-        console.log('calculateFinancialRatios called');
         this.updateBasicLiquidityRatio();
         this.updateSavingsRatio();
         this.updateLiquidityToNetWorthRatio();
@@ -3020,38 +3046,22 @@ class FinanceTracker {
         const basicLiquidityRatio = totalMonthlyExpenses > 0 ?
             totalCashEquivalents / totalMonthlyExpenses : 0;
 
-        this.updateRatioElement('basicLiquidityRatio', basicLiquidityRatio.toFixed(1), ' months');
+        this.updateRatioElement('basicLiquidityRatio', basicLiquidityRatio, ' months');
     }
 
     updateSavingsRatio() {
-        console.log('updateSavingsRatio called');
         const snapshot = this.getCurrentSnapshot();
         if (!snapshot) {
-            console.log('No snapshot found, setting savings ratio to 0');
             this.updateRatioElement('savingsRatio', 0, '%');
             return;
         }
-
-        console.log('Snapshot data:', snapshot.data);
-
         // Calculate total monthly income
         const totalMonthlyIncome = snapshot.data.incomes
-            .reduce((sum, income) => {
-                console.log('Income item:', income, 'amount:', income.amount, typeof income.amount);
-                return sum + this.validateNumber(income.amount);
-            }, 0);
+            .reduce((sum, income) => sum + this.validateNumber(income.amount), 0);
 
         // Calculate total monthly expenses
         const totalMonthlyExpenses = snapshot.data.expenses
-            .reduce((sum, expense) => {
-                console.log('Expense item:', expense, 'amount:', expense.amount, typeof expense.amount);
-                return sum + this.validateNumber(expense.amount);
-            }, 0);
-
-        console.log('Totals calculated:', {
-            rawIncome: totalMonthlyIncome,
-            rawExpenses: totalMonthlyExpenses
-        });
+            .reduce((sum, expense) => sum + this.validateNumber(expense.amount), 0);
 
         // Calculate monthly savings (income minus expenses)
         const monthlySavings = totalMonthlyIncome - totalMonthlyExpenses;
@@ -3059,13 +3069,6 @@ class FinanceTracker {
         // Calculate savings ratio: (Monthly Savings ÷ Monthly Income) × 100%
         const savingsRatio = totalMonthlyIncome > 0 ?
             (monthlySavings / totalMonthlyIncome) * 100 : 0;
-
-        console.log('Savings Ratio calculation:', {
-            income: totalMonthlyIncome,
-            expenses: totalMonthlyExpenses,
-            savings: monthlySavings,
-            ratio: savingsRatio
-        });
 
         // Update the ratio element with the calculated value
         this.updateRatioElement('savingsRatio', savingsRatio, '%');
@@ -3199,10 +3202,14 @@ class FinanceTracker {
     }
 
     formatRatioValue(value, unit) {
-        if (unit === 'x') {
-            return `${value === Infinity ? '∞' : value.toFixed(1)}${unit}`;
-        } else if (unit === '%') {
-            return `${value.toFixed(1)}${unit}`;
+        const u = typeof unit === 'string' ? unit.trim() : unit;
+        const num = typeof value === 'number' ? value : parseFloat(value);
+        if (u === 'x') {
+            return `${num === Infinity ? '∞' : num.toFixed(1)}${u}`;
+        } else if (u === '%') {
+            return `${num.toFixed(1)}${u}`;
+        } else if (u === 'months') {
+            return `${num.toFixed(1)} ${u}`;
         }
         return `${value}${unit}`;
     }
@@ -3277,11 +3284,669 @@ class FinanceTracker {
             }
         }, 5000); // Longer duration for fresh start message
     }
+
+    // AI Chatbot Methods
+    getSnapshotDataForAI() {
+        const snapshot = this.getCurrentSnapshot();
+        if (!snapshot) {
+            return null;
+        }
+
+        const summary = this.calculateSummary();
+        const data = snapshot.data;
+
+        // Format assets by category
+        const assetsByCategory = {};
+        data.assets.forEach(asset => {
+            if (!assetsByCategory[asset.category]) {
+                assetsByCategory[asset.category] = [];
+            }
+            assetsByCategory[asset.category].push({
+                name: asset.name,
+                amount: asset.amount,
+                liquidity: asset.liquidity
+            });
+        });
+
+        // Format liabilities by term
+        const liabilitiesByTerm = {};
+        data.liabilities.forEach(liability => {
+            if (!liabilitiesByTerm[liability.term]) {
+                liabilitiesByTerm[liability.term] = [];
+            }
+            liabilitiesByTerm[liability.term].push({
+                name: liability.name,
+                amount: liability.amount
+            });
+        });
+
+        // Format incomes by category
+        const incomesByCategory = {};
+        data.incomes.forEach(income => {
+            if (!incomesByCategory[income.category]) {
+                incomesByCategory[income.category] = [];
+            }
+            incomesByCategory[income.category].push({
+                name: income.name,
+                amount: income.amount
+            });
+        });
+
+        // Format expenses by category
+        const expensesByCategory = {};
+        data.expenses.forEach(expense => {
+            if (!expensesByCategory[expense.category]) {
+                expensesByCategory[expense.category] = [];
+            }
+            expensesByCategory[expense.category].push({
+                name: expense.name,
+                amount: expense.amount
+            });
+        });
+
+        // Calculate financial ratios
+        const cashEquivalents = data.assets
+            .filter(a => a.category === 'cash' && a.liquidity === 'high')
+            .reduce((sum, a) => sum + a.amount, 0);
+        const totalExpenses = summary.totalExpenses || 1;
+        const basicLiquidityRatio = totalExpenses > 0 ? (cashEquivalents / totalExpenses).toFixed(2) : 'N/A';
+        
+        const debtToAssetRatio = summary.totalAssets > 0 
+            ? ((summary.totalLiabilities / summary.totalAssets) * 100).toFixed(2) 
+            : '0.00';
+        
+        const solvencyRatio = summary.totalAssets > 0 
+            ? ((summary.netWorth / summary.totalAssets) * 100).toFixed(2) 
+            : '0.00';
+        
+        const savingsRatio = summary.totalIncome > 0 
+            ? ((summary.savings / summary.totalIncome) * 100).toFixed(2) 
+            : '0.00';
+
+        return {
+            snapshotName: snapshot.label,
+            snapshotDate: this.formatDate(snapshot.createdAt),
+            summary: {
+                totalAssets: summary.totalAssets,
+                totalLiabilities: summary.totalLiabilities,
+                netWorth: summary.netWorth,
+                totalIncome: summary.totalIncome,
+                totalExpenses: summary.totalExpenses,
+                savings: summary.savings
+            },
+            assets: {
+                byCategory: assetsByCategory,
+                total: summary.totalAssets
+            },
+            liabilities: {
+                byTerm: liabilitiesByTerm,
+                total: summary.totalLiabilities
+            },
+            incomes: {
+                byCategory: incomesByCategory,
+                total: summary.totalIncome
+            },
+            expenses: {
+                byCategory: expensesByCategory,
+                total: summary.totalExpenses
+            },
+            ratios: {
+                basicLiquidity: basicLiquidityRatio,
+                debtToAsset: debtToAssetRatio,
+                solvency: solvencyRatio,
+                savings: savingsRatio
+            }
+        };
+    }
+
+    formatSnapshotDataForAIContext(snapshotData) {
+        if (!snapshotData) {
+            return 'No snapshot data available. Please create or select a snapshot first.';
+        }
+
+        let context = `User's Financial Snapshot: "${snapshotData.snapshotName}" (created: ${snapshotData.snapshotDate})\n\n`;
+        
+        context += `FINANCIAL SUMMARY:\n`;
+        context += `- Total Assets: $${this.formatCurrencyForAI(snapshotData.summary.totalAssets)}\n`;
+        context += `- Total Liabilities: $${this.formatCurrencyForAI(snapshotData.summary.totalLiabilities)}\n`;
+        context += `- Net Worth: $${this.formatCurrencyForAI(snapshotData.summary.netWorth)}\n`;
+        context += `- Monthly Income: $${this.formatCurrencyForAI(snapshotData.summary.totalIncome)}\n`;
+        context += `- Monthly Expenses: $${this.formatCurrencyForAI(snapshotData.summary.totalExpenses)}\n`;
+        context += `- Monthly Savings: $${this.formatCurrencyForAI(snapshotData.summary.savings)}\n\n`;
+
+        context += `FINANCIAL RATIOS:\n`;
+        context += `- Basic Liquidity Ratio: ${snapshotData.ratios.basicLiquidity} months (emergency fund coverage)\n`;
+        context += `- Debt to Asset Ratio: ${snapshotData.ratios.debtToAsset}%\n`;
+        context += `- Solvency Ratio: ${snapshotData.ratios.solvency}%\n`;
+        context += `- Savings Ratio: ${snapshotData.ratios.savings}%\n\n`;
+
+        context += `ASSETS BREAKDOWN:\n`;
+        Object.keys(snapshotData.assets.byCategory).forEach(category => {
+            context += `\n${category.toUpperCase()}:\n`;
+            snapshotData.assets.byCategory[category].forEach(asset => {
+                context += `  - ${asset.name}: $${this.formatCurrencyForAI(asset.amount)} (Liquidity: ${asset.liquidity})\n`;
+            });
+        });
+
+        context += `\nLIABILITIES BREAKDOWN:\n`;
+        Object.keys(snapshotData.liabilities.byTerm).forEach(term => {
+            context += `\n${term.toUpperCase()}:\n`;
+            snapshotData.liabilities.byTerm[term].forEach(liability => {
+                context += `  - ${liability.name}: $${this.formatCurrencyForAI(liability.amount)}\n`;
+            });
+        });
+
+        context += `\nINCOME BREAKDOWN:\n`;
+        Object.keys(snapshotData.incomes.byCategory).forEach(category => {
+            context += `\n${category.toUpperCase()}:\n`;
+            snapshotData.incomes.byCategory[category].forEach(income => {
+                context += `  - ${income.name}: $${this.formatCurrencyForAI(income.amount)}/month\n`;
+            });
+        });
+
+        context += `\nEXPENSES BREAKDOWN:\n`;
+        Object.keys(snapshotData.expenses.byCategory).forEach(category => {
+            context += `\n${category.toUpperCase()}:\n`;
+            snapshotData.expenses.byCategory[category].forEach(expense => {
+                context += `  - ${expense.name}: $${this.formatCurrencyForAI(expense.amount)}/month\n`;
+            });
+        });
+
+        return context;
+    }
+
+    formatCurrencyForAI(amount) {
+        // Format currency for AI context (simple number format without $ and commas)
+        return parseFloat(amount).toFixed(2);
+    }
+
+    getProviderConfig() {
+        // Get custom configuration from localStorage
+        const apiKey = localStorage.getItem('ai_api_key') || '';
+        const baseUrl = localStorage.getItem('ai_base_url') || 'https://api.openai.com/v1';
+        const modelId = localStorage.getItem('ai_model_id') || 'gpt-4o-mini';
+
+        return {
+            name: 'OpenAI Compatible',
+            endpoint: `${baseUrl}/chat/completions`,
+            model: modelId,
+            apiKey: apiKey,
+            apiKeyPattern: 'sk-',
+            baseUrl: baseUrl
+        };
+    }
+
+    async sendChatbotMessage(userMessage) {
+        const snapshotData = this.getSnapshotDataForAI();
+        const snapshotContext = this.formatSnapshotDataForAIContext(snapshotData);
+
+        const systemPrompt = `You are a helpful AI Finance Assistant for a personal finance tracking website. Your role is to help users understand their financial snapshot and provide insights based on their specific financial data.
+
+CRITICAL FORMATTING REQUIREMENTS:
+- RESPOND IN PLAIN TEXT ONLY - NEVER use *, #, **, or any markdown formatting
+- Use bullet points, numbered lists, headers, or any special characters for formatting
+- Write in normal paragraphs with regular sentences
+- Keep responses concise - aim for 150-300 words maximum
+- Be direct and to the point
+
+IMPORTANT GUIDELINES:
+- Stay friendly and helpful while being extremely concise
+- Focus on actionable insights based on the user's actual data
+- Reference specific numbers from their snapshot
+- Explain financial concepts in simple terms
+- Be encouraging but realistic, do not sugar coat and provide good insights
+- If the user asks about something not in their snapshot, politely let them know
+
+User's Current Financial Snapshot Data:
+${snapshotContext}
+
+Remember to analyze the actual numbers provided and give personalized, data-driven advice.`;
+
+        const messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+        ];
+
+        try {
+            const apiKey = localStorage.getItem('ai_api_key') || '';
+            const providerConfig = this.getProviderConfig();
+            
+            if (!apiKey) {
+                return `⚠️ AI Assistant is not configured. Please add your ${providerConfig.name} API key in the settings. For now, here's a simple analysis:\n\n` + 
+                       this.generateBasicAnalysis(snapshotData);
+            }
+
+            const response = await fetch(providerConfig.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: providerConfig.model,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 500
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}: ${response.statusText}` } }));
+                throw new Error(errorData.error?.message || 'API request failed');
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content.trim();
+        } catch (error) {
+            console.error('Chatbot error:', error);
+            // Fallback to basic analysis if API fails
+            return `⚠️ Unable to connect to AI service (${error.message}). Here's a basic analysis:\n\n` + 
+                   this.generateBasicAnalysis(snapshotData);
+        }
+    }
+
+    generateBasicAnalysis(snapshotData) {
+        if (!snapshotData) {
+            return 'Please create or select a snapshot to get financial insights.';
+        }
+
+        let analysis = `Based on your "${snapshotData.snapshotName}" snapshot:\n\n`;
+        
+        analysis += `💰 NET WORTH: $${snapshotData.summary.netWorth.toFixed(2)}\n`;
+        if (snapshotData.summary.netWorth < 0) {
+            analysis += `   Your liabilities exceed your assets. Focus on paying down debt.\n\n`;
+        } else {
+            analysis += `   You have positive net worth - keep building!\n\n`;
+        }
+
+        analysis += `📊 MONTHLY FLOW:\n`;
+        analysis += `   Income: $${snapshotData.summary.totalIncome.toFixed(2)}\n`;
+        analysis += `   Expenses: $${snapshotData.summary.totalExpenses.toFixed(2)}\n`;
+        analysis += `   Savings: $${snapshotData.summary.savings.toFixed(2)} (${snapshotData.ratios.savings}%)\n\n`;
+
+        return analysis;
+    }
+
+    addChatbotMessage(message, isUser = false) {
+        const messagesContainer = document.getElementById('chatbotMessages');
+        if (!messagesContainer) return;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chatbot-message ${isUser ? 'chatbot-message-user' : 'chatbot-message-assistant'}`;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        
+        // Convert newlines to paragraphs
+        const paragraphs = message.split('\n').filter(p => p.trim());
+        paragraphs.forEach((para, index) => {
+            const p = document.createElement('p');
+            // Check if it's a list item
+            if (para.trim().startsWith('-') || para.trim().match(/^\d+\./)) {
+                p.style.marginLeft = '1rem';
+                p.textContent = para.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '');
+            } else {
+                p.textContent = para;
+            }
+            if (index < paragraphs.length - 1) {
+                p.style.marginBottom = '0.5rem';
+            }
+            contentDiv.appendChild(p);
+        });
+
+        messageDiv.appendChild(contentDiv);
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    updateChatbotSnapshotInfo() {
+        const infoElement = document.getElementById('chatbotSnapshotInfo');
+        if (!infoElement) return;
+
+        const snapshot = this.getCurrentSnapshot();
+        if (snapshot) {
+            infoElement.textContent = `Snapshot: ${snapshot.label}`;
+        } else {
+            infoElement.textContent = 'No snapshot selected';
+        }
+    }
+
+    initChatbot() {
+        const toggleBtn = document.getElementById('chatbotToggle');
+        const closeBtn = document.getElementById('chatbotClose');
+        const sendBtn = document.getElementById('chatbotSend');
+        const inputField = document.getElementById('chatbotInput');
+        const chatbotWindow = document.getElementById('chatbotWindow');
+        const settingsBtn = document.getElementById('chatbotSettings');
+        const settingsModal = document.getElementById('chatbotSettingsModal');
+        const settingsCloseBtn = document.getElementById('chatbotSettingsClose');
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+
+        if (!toggleBtn || !closeBtn || !sendBtn || !inputField || !chatbotWindow) {
+            console.warn('Chatbot elements not found');
+            return;
+        }
+
+        // Toggle chatbot window
+        toggleBtn.addEventListener('click', () => {
+            chatbotWindow.classList.toggle('active');
+            if (chatbotWindow.classList.contains('active')) {
+                this.updateChatbotSnapshotInfo();
+                // Only focus on desktop to avoid opening keyboard on mobile
+                if (window.innerWidth > 768) {
+                    inputField.focus();
+                }
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            chatbotWindow.classList.remove('active');
+        });
+
+        // Send message on button click
+        sendBtn.addEventListener('click', async () => {
+            await this.handleChatbotSend();
+        });
+
+        // Send message on Enter key
+        inputField.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                await this.handleChatbotSend();
+            }
+        });
+
+        // Settings modal handlers
+        if (settingsBtn && settingsModal) {
+            settingsBtn.addEventListener('click', () => {
+                this.openChatbotSettings();
+            });
+        }
+
+        if (settingsCloseBtn && settingsModal) {
+            settingsCloseBtn.addEventListener('click', () => {
+                this.closeChatbotSettings();
+            });
+
+            // Close on backdrop click
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    this.closeChatbotSettings();
+                }
+            });
+        }
+
+        if (saveApiKeyBtn && apiKeyInput) {
+            saveApiKeyBtn.addEventListener('click', () => {
+                this.saveApiKey();
+            });
+        }
+
+        if (clearApiKeyBtn) {
+            clearApiKeyBtn.addEventListener('click', () => {
+                this.clearApiKey();
+            });
+        }
+
+        // Clear chat functionality
+        const clearChatBtn = document.getElementById('chatbotClear');
+        if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', () => {
+                this.clearChat();
+            });
+        }
+
+        // Clear masked input when user starts typing (optional - removed to keep key visible)
+        // Users can choose to replace or clear manually
+
+        // No provider selection needed - single OpenAI-compatible provider
+
+        // Migrate old API key storage if exists
+        this.migrateApiKeyStorage();
+
+        // Load existing API key if present
+        this.loadApiKeyStatus();
+
+        // Initial update
+        this.updateChatbotSnapshotInfo();
+    }
+
+    openChatbotSettings() {
+        const settingsModal = document.getElementById('chatbotSettingsModal');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const baseUrlInput = document.getElementById('baseUrlInput');
+        const modelIdInput = document.getElementById('modelIdInput');
+
+        if (!settingsModal || !apiKeyInput || !baseUrlInput || !modelIdInput) return;
+
+        // Load current values
+        const currentKey = localStorage.getItem('ai_api_key') || '';
+        const currentBaseUrl = localStorage.getItem('ai_base_url') || 'https://api.openai.com/v1';
+        const currentModelId = localStorage.getItem('ai_model_id') || 'gpt-4o-mini';
+
+        // Load API key (show full key for visibility, use data-has-key to track state)
+        if (currentKey) {
+            apiKeyInput.value = currentKey;
+            apiKeyInput.setAttribute('data-has-key', 'true');
+        } else {
+            apiKeyInput.value = '';
+            apiKeyInput.removeAttribute('data-has-key');
+        }
+
+        // Load base URL and model ID
+        baseUrlInput.value = currentBaseUrl;
+        modelIdInput.value = currentModelId;
+
+        settingsModal.classList.add('active');
+        // Only focus on desktop to avoid opening keyboard on mobile
+        if (window.innerWidth > 768) {
+            apiKeyInput.focus();
+        }
+    }
+
+    // Removed updateProviderHelp method as we're now using a single OpenAI-compatible provider
+
+    migrateApiKeyStorage() {
+        // Migrate old 'openai_api_key' to new 'ai_api_key' and 'ai_provider'
+        const oldKey = localStorage.getItem('openai_api_key');
+        if (oldKey && !localStorage.getItem('ai_api_key')) {
+            localStorage.setItem('ai_api_key', oldKey);
+            localStorage.setItem('ai_provider', 'openai');
+            // Optionally remove old key
+            // localStorage.removeItem('openai_api_key');
+        }
+    }
+
+    closeChatbotSettings() {
+        const settingsModal = document.getElementById('chatbotSettingsModal');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        
+        if (settingsModal) {
+            settingsModal.classList.remove('active');
+        }
+        
+        if (apiKeyInput) {
+            apiKeyInput.value = '';
+            apiKeyInput.removeAttribute('data-masked');
+        }
+    }
+
+    saveApiKey() {
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const baseUrlInput = document.getElementById('baseUrlInput');
+        const modelIdInput = document.getElementById('modelIdInput');
+
+        if (!apiKeyInput || !baseUrlInput || !modelIdInput) return;
+
+        let apiKey = apiKeyInput.value.trim();
+        const baseUrl = baseUrlInput.value.trim();
+        const modelId = modelIdInput.value.trim();
+
+        // If input is empty, clear the API key
+        if (!apiKey) {
+            localStorage.removeItem('ai_api_key');
+            this.showMessage('API key cleared', 'success');
+        } else {
+            // Always validate and save the key since we now show the full key
+            // Basic validation - most providers use keys starting with 'sk-'
+            if (!apiKey.startsWith('sk-')) {
+                if (!confirm(`This doesn't look like a valid OpenAI-compatible API key (should start with "sk-"). Save anyway?`)) {
+                    return;
+                }
+            }
+            localStorage.setItem('ai_api_key', apiKey);
+            this.showMessage('Settings saved! AI assistant is ready to use.', 'success');
+        }
+
+        // Always save base URL and model ID
+        if (!baseUrl) {
+            this.showMessage('Please enter a Base URL', 'error');
+            return;
+        }
+
+        if (!modelId) {
+            this.showMessage('Please enter a Model ID', 'error');
+            return;
+        }
+
+        localStorage.setItem('ai_base_url', baseUrl);
+        localStorage.setItem('ai_model_id', modelId);
+
+        // Update status
+        this.loadApiKeyStatus();
+
+        // Clear input (but keep data-masked attribute for display consistency)
+        apiKeyInput.value = '';
+        apiKeyInput.removeAttribute('data-masked');
+    }
+
+    clearApiKey() {
+        if (confirm('Are you sure you want to clear your API key? You\'ll need to enter it again to use AI features.')) {
+            localStorage.removeItem('ai_api_key');
+            localStorage.removeItem('ai_base_url');
+            localStorage.removeItem('ai_model_id');
+            // Clear all input fields
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const baseUrlInput = document.getElementById('baseUrlInput');
+            const modelIdInput = document.getElementById('modelIdInput');
+
+            if (apiKeyInput) {
+                apiKeyInput.value = '';
+                apiKeyInput.removeAttribute('data-masked');
+            }
+            if (baseUrlInput) {
+                baseUrlInput.value = '';
+            }
+            if (modelIdInput) {
+                modelIdInput.value = '';
+            }
+            this.loadApiKeyStatus();
+            this.showMessage('API key and settings cleared', 'success');
+        }
+    }
+
+    loadApiKeyStatus() {
+        const statusElement = document.getElementById('apiKeyStatus');
+        const statusText = document.getElementById('apiKeyStatusText');
+
+        if (!statusElement || !statusText) return;
+
+        const apiKey = localStorage.getItem('ai_api_key');
+        const baseUrl = localStorage.getItem('ai_base_url') || 'https://api.openai.com/v1';
+        const modelId = localStorage.getItem('ai_model_id') || 'gpt-4o-mini';
+
+        if (apiKey) {
+            statusElement.className = 'settings-status configured';
+            // Extract domain from base URL for display
+            const urlMatch = baseUrl.match(/\/\/([^\/]+)/);
+            const domain = urlMatch ? urlMatch[1] : baseUrl;
+            statusText.textContent = `✓ API key configured (${domain} - ${modelId})`;
+        } else {
+            statusElement.className = 'settings-status not-configured';
+            statusText.textContent = '⚠ API key not configured';
+        }
+    }
+
+    // Clear chat functionality
+    clearChat() {
+        const messagesContainer = document.getElementById('chatbotMessages');
+        if (!messagesContainer) return;
+
+        // Keep only the welcome message
+        const welcomeMessage = messagesContainer.querySelector('.chatbot-message-assistant');
+        messagesContainer.innerHTML = '';
+
+        if (welcomeMessage) {
+            messagesContainer.appendChild(welcomeMessage);
+        } else {
+            // If welcome message was removed, add it back
+            const newWelcomeMessage = document.createElement('div');
+            newWelcomeMessage.className = 'chatbot-message chatbot-message-assistant';
+            newWelcomeMessage.innerHTML = `
+                <div class="message-content">
+                    <p>Hello! I'm your AI Finance Assistant. I can help answer questions about your current financial snapshot, including:</p>
+                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                        <li>Your assets, liabilities, income, and expenses</li>
+                        <li>Financial ratios and what they mean</li>
+                        <li>Suggestions for improvement</li>
+                        <li>Analysis of your financial health</li>
+                    </ul>
+                    <p style="margin-top: 0.5rem;">What would you like to know about your finances?</p>
+                </div>
+            `;
+            messagesContainer.appendChild(newWelcomeMessage);
+        }
+    }
+
+    async handleChatbotSend() {
+        const inputField = document.getElementById('chatbotInput');
+        const sendBtn = document.getElementById('chatbotSend');
+        const loadingIndicator = document.getElementById('chatbotLoading');
+
+        if (!inputField || !sendBtn) return;
+
+        const userMessage = inputField.value.trim();
+        if (!userMessage) return;
+
+        // Add user message to chat
+        this.addChatbotMessage(userMessage, true);
+        inputField.value = '';
+
+        // Disable input while processing
+        inputField.disabled = true;
+        sendBtn.disabled = true;
+        if (loadingIndicator) loadingIndicator.style.display = 'block';
+
+        try {
+            // Get AI response
+            const aiResponse = await this.sendChatbotMessage(userMessage);
+            this.addChatbotMessage(aiResponse, false);
+        } catch (error) {
+            console.error('Error getting AI response:', error);
+            this.addChatbotMessage('Sorry, I encountered an error. Please try again.', false);
+        } finally {
+            // Re-enable input
+            inputField.disabled = false;
+            sendBtn.disabled = false;
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            inputField.focus();
+        }
+    }
 }
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded - Initializing FinanceTracker');
+    const updateViewportHeightVar = () => {
+        const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const vh = h * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    updateViewportHeightVar();
+    window.addEventListener('resize', updateViewportHeightVar);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewportHeightVar);
+    }
     window.financeTracker = new FinanceTracker();
-    console.log('FinanceTracker initialized');
 });

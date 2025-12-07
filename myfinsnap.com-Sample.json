@@ -1,0 +1,194 @@
+{
+  "snapshots": [
+    {
+      "id": "mi92nklfrbkqske097g",
+      "label": "22nd November",
+      "createdAt": "2025-11-21T16:25:46.755Z",
+      "data": {
+        "assets": [
+          {
+            "name": "Cash",
+            "amount": 5000,
+            "category": "cash",
+            "liquidity": "high"
+          },
+          {
+            "name": "Bitcoin",
+            "amount": 200,
+            "category": "investments",
+            "liquidity": "high"
+          },
+          {
+            "name": "Bonds",
+            "amount": 1000,
+            "category": "investments",
+            "liquidity": "medium"
+          },
+          {
+            "name": "Shares",
+            "amount": 1500,
+            "category": "investments",
+            "liquidity": "high"
+          },
+          {
+            "name": "ETF - VWRA",
+            "amount": 2000,
+            "category": "investments",
+            "liquidity": "medium"
+          }
+        ],
+        "liabilities": [
+          {
+            "name": "Student Loan",
+            "amount": 5000,
+            "term": "medium-term"
+          },
+          {
+            "name": "BTO Loan",
+            "amount": 500,
+            "term": "long-term"
+          }
+        ],
+        "incomes": [
+          {
+            "name": "Job (Take Home)",
+            "amount": 2300,
+            "category": "employment"
+          },
+          {
+            "name": "Tutoring",
+            "amount": 100,
+            "category": "business"
+          }
+        ],
+        "expenses": [
+          {
+            "name": "Transport",
+            "amount": 120,
+            "category": "essential"
+          },
+          {
+            "name": "Food",
+            "amount": 800,
+            "category": "variable"
+          },
+          {
+            "name": "Mobile Plan",
+            "amount": 15,
+            "category": "variable"
+          },
+          {
+            "name": "Entertainment",
+            "amount": 200,
+            "category": "discretionary"
+          },
+          {
+            "name": "Parent's Allowance",
+            "amount": 600,
+            "category": "essential"
+          },
+          {
+            "name": "Miscellanous",
+            "amount": 200,
+            "category": "other"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mi930o2rjrm7ds5sxkd",
+      "label": "Future Projections",
+      "createdAt": "2025-11-21T16:35:57.795Z",
+      "data": {
+        "assets": [
+          {
+            "name": "Cash",
+            "amount": 5000,
+            "category": "cash",
+            "liquidity": "high"
+          },
+          {
+            "name": "Bitcoin",
+            "amount": 200,
+            "category": "investments",
+            "liquidity": "high"
+          },
+          {
+            "name": "Shares",
+            "amount": 1500,
+            "category": "investments",
+            "liquidity": "high"
+          },
+          {
+            "name": "ETF - VWRA",
+            "amount": 2000,
+            "category": "investments",
+            "liquidity": "medium"
+          },
+          {
+            "name": "Money Market Fund",
+            "amount": 6000,
+            "category": "cash",
+            "liquidity": "high"
+          }
+        ],
+        "liabilities": [
+          {
+            "name": "BTO Loan",
+            "amount": 500,
+            "term": "long-term"
+          },
+          {
+            "name": "Computer Installment",
+            "amount": 50,
+            "term": "short-term"
+          }
+        ],
+        "incomes": [
+          {
+            "name": "Job (Take Home)",
+            "amount": 3000,
+            "category": "employment"
+          },
+          {
+            "name": "Tutoring",
+            "amount": 100,
+            "category": "business"
+          }
+        ],
+        "expenses": [
+          {
+            "name": "Transport",
+            "amount": 120,
+            "category": "essential"
+          },
+          {
+            "name": "Food",
+            "amount": 800,
+            "category": "variable"
+          },
+          {
+            "name": "Mobile Plan",
+            "amount": 15,
+            "category": "variable"
+          },
+          {
+            "name": "Entertainment",
+            "amount": 200,
+            "category": "discretionary"
+          },
+          {
+            "name": "Parent's Allowance",
+            "amount": 600,
+            "category": "essential"
+          },
+          {
+            "name": "Miscellanous",
+            "amount": 200,
+            "category": "other"
+          }
+        ]
+      }
+    }
+  ]
+}
